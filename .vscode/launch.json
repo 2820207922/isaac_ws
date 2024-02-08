@@ -1,0 +1,37 @@
+{
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "ISAAC_PATH": "${config:ISAAC_SIM_PATH}",
+                "CARB_APP_PATH": "${config:ISAAC_SIM_PATH}/kit",
+                "EXP_PATH": "${config:ISAAC_SIM_PATH}/apps",
+                "RESOURCE_NAME": "IsaacSim"
+            },
+            "python": "${config:ISAAC_SIM_PATH}/kit/python/python.exe",
+            "envFile": "${workspaceFolder}/.vscode/setup_python.env",
+            "preLaunchTask": "setup_python_env",
+            "args": [
+                "--/persistent/isaac/asset_root/default=\"omniverse://my_server\""
+            ],
+        },
+        {
+            "name": "Python: Attach (local)",
+            "type": "python",
+            "request": "attach",
+            "port": 3000,
+            "host": "127.0.0.1"
+        },
+        {
+            "name": "Python: Attach (cloud)",
+            "type": "python",
+            "request": "attach",
+            "port": 3000,
+            "host": "{config:CLOUD_IP}"
+        },
+    ]
+}

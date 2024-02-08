@@ -1,0 +1,395 @@
+# serverAddr = "10.122.210.69"
+serverPort = 7000
+
+[[proxies]]
+name = "ssh"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 22
+remotePort = 1234
+
+[[proxies]]
+name = "python-server"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 3000
+remotePort = 3000
+
+[[proxies]]
+name = "isaac-sim-webrtc"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 8211
+remotePort = 8211
+
+[[proxies]]
+name = "isaac-sim-core"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49100
+remotePort = 49100
+
+[[proxies]]
+name = "isaac-sim-core-udp-47995"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 47995
+remotePort = 47995
+    
+[[proxies]]
+name = "isaac-sim-core-udp-47996"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 47996
+remotePort = 47996
+    
+[[proxies]]
+name = "isaac-sim-core-udp-47997"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 47997
+remotePort = 47997
+    
+[[proxies]]
+name = "isaac-sim-core-udp-47998"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 47998
+remotePort = 47998
+    
+[[proxies]]
+name = "isaac-sim-core-udp-47999"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 47999
+remotePort = 47999
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48000"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48000
+remotePort = 48000
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48001"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48001
+remotePort = 48001
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48002"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48002
+remotePort = 48002
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48003"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48003
+remotePort = 48003
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48004"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48004
+remotePort = 48004
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48005"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48005
+remotePort = 48005
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48006"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48006
+remotePort = 48006
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48007"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48007
+remotePort = 48007
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48008"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48008
+remotePort = 48008
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48009"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48009
+remotePort = 48009
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48010"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48010
+remotePort = 48010
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48011"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48011
+remotePort = 48011
+    
+[[proxies]]
+name = "isaac-sim-core-udp-48012"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 48012
+remotePort = 48012
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49000"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49000
+remotePort = 49000
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49001"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49001
+remotePort = 49001
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49002"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49002
+remotePort = 49002
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49003"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49003
+remotePort = 49003
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49004"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49004
+remotePort = 49004
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49005"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49005
+remotePort = 49005
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49006"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49006
+remotePort = 49006
+    
+[[proxies]]
+name = "isaac-sim-core-udp-49007"
+type = "udp"
+localIP = "127.0.0.1"
+localPort = 49007
+remotePort = 49007
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-47995"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 47995
+remotePort = 47995
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-47996"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 47996
+remotePort = 47996
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-47997"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 47997
+remotePort = 47997
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-47998"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 47998
+remotePort = 47998
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-47999"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 47999
+remotePort = 47999
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48000"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48000
+remotePort = 48000
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48001"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48001
+remotePort = 48001
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48002"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48002
+remotePort = 48002
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48003"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48003
+remotePort = 48003
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48004"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48004
+remotePort = 48004
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48005"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48005
+remotePort = 48005
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48006"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48006
+remotePort = 48006
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48007"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48007
+remotePort = 48007
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48008"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48008
+remotePort = 48008
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48009"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48009
+remotePort = 48009
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48010"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48010
+remotePort = 48010
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48011"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48011
+remotePort = 48011
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-48012"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 48012
+remotePort = 48012
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49000"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49000
+remotePort = 49000
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49001"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49001
+remotePort = 49001
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49002"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49002
+remotePort = 49002
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49003"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49003
+remotePort = 49003
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49004"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49004
+remotePort = 49004
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49005"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49005
+remotePort = 49005
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49006"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49006
+remotePort = 49006
+    
+[[proxies]]
+name = "isaac-sim-core-tcp-49007"
+type = "tcp"
+localIP = "127.0.0.1"
+localPort = 49007
+remotePort = 49007
+    

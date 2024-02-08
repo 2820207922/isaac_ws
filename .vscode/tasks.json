@@ -1,0 +1,133 @@
+{
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "PYTHONPATH": "${config:ISAAC_SIM_PATH}/site"
+        }
+    },
+    "tasks": [
+        {
+            "label": "setup_python_env",
+            "type": "shell",
+            "windows": {
+                "command": "set > ${workspaceFolder}/.vscode/setup_python.env"
+            },
+            "linux": {
+                "command": "printenv > ${workspaceFolder}/.vscode/setup_python.env"
+            },
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "isaac sim",
+            "type": "shell",
+            "windows": {
+                "command": "${config:ISAAC_SIM_PATH}/isaac-sim.bat --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000"
+            },
+            "linux": {
+                "command": "bash ${config:ISAAC_SIM_PATH}/isaac-sim.sh --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000"
+            }
+        },
+        {
+            "label": "isaac sim headless native all",
+            "type": "shell",
+            "windows": {
+                "command": "${config:ISAAC_SIM_PATH}/isaac-sim.headless.native.bat --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000 --/app/window/dpiScaleOverride=1.5 --/app/window/drawMouse=false --no-window --/app/livestream/allowResize=true --/renderer/multiGpu/activeGpus='0,1' -/exts/omni.services.transport.server.http/port=8211"
+            },
+            "linux": {
+                "command": "export CUDA_VISIBLE_DEVICES=0,1 && bash ${config:ISAAC_SIM_PATH}/isaac-sim.headless.native.sh --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000 --/app/window/dpiScaleOverride=1.5 --/app/window/drawMouse=false --no-window --/app/livestream/allowResize=true --/renderer/multiGpu/activeGpus='0,1' -/exts/omni.services.transport.server.http/port=8211"
+            }
+        },
+        {
+            "label": "isaac sim headless native cuda:0",
+            "type": "shell",
+            "windows": {
+                "command": "${config:ISAAC_SIM_PATH}/isaac-sim.headless.native.bat --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000 --/app/window/dpiScaleOverride=1.5 --/app/window/drawMouse=false --no-window --/app/livestream/allowResize=true --/renderer/activeGpu=0"
+            },
+            "linux": {
+                "command": "export CUDA_VISIBLE_DEVICES=0 && bash ${config:ISAAC_SIM_PATH}/isaac-sim.headless.native.sh --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000 --/app/window/dpiScaleOverride=1.5 --/app/window/drawMouse=false --no-window --/app/livestream/allowResize=true --/renderer/activeGpu=0"
+            }
+        },
+        {
+            "label": "isaac sim headless native cuda:1",
+            "type": "shell",
+            "windows": {
+                "command": "${config:ISAAC_SIM_PATH}/isaac-sim.headless.native.bat --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000 --/app/window/dpiScaleOverride=1.5 --/app/window/drawMouse=false --no-window --/app/livestream/allowResize=true -/exts/omni.services.transport.server.http/port=8211 --/renderer/activeGpu=1"
+            },
+            "linux": {
+                "command": "export CUDA_VISIBLE_DEVICES=1 && bash ${config:ISAAC_SIM_PATH}/isaac-sim.headless.native.sh --/exts/omni.kit.debug.python/host=\"127.0.0.1\" --/exts/omni.kit.debug.python/port=3000 --/app/window/dpiScaleOverride=1.5 --/app/window/drawMouse=false --no-window --/app/livestream/allowResize=true -/exts/omni.services.transport.server.http/port=8211 --/renderer/activeGpu=1"
+            }
+        },
+        {
+            "label": "frp_client",
+            "type": "shell",
+            "linux": {
+                "command": "sh ${workspaceFolder}/.vscode/run_frpc.sh ${input:frp_server_ip} ${workspaceFolder}/.vscode/frpc.toml ${config:FRPC_PATH}"
+            }
+        },
+        {
+            "label": "frp_client cloud",
+            "type": "shell",
+            "linux": {
+                "command": "sh ${workspaceFolder}/.vscode/run_frpc.sh ${config:CLOUD_IP} ${workspaceFolder}/.vscode/frpc.toml ${config:FRPC_PATH}"
+            }
+        },
+        {
+            "label": "frp_client user0",
+            "type": "shell",
+            "linux": {
+                "command": "sh ${workspaceFolder}/.vscode/run_frpc.sh ${config:USER0_IP} ${workspaceFolder}/.vscode/frpc.toml ${config:FRPC_PATH}"
+            }
+        },
+        {
+            "label": "frp_client user1",
+            "type": "shell",
+            "linux": {
+                "command": "sh ${workspaceFolder}/.vscode/run_frpc.sh ${config:USER1_IP} ${workspaceFolder}/.vscode/frpc.toml ${config:FRPC_PATH}"
+            }
+        },
+        {
+            "label": "frp_server wsl",
+            "type": "shell",
+            "windows": {
+                "command": "${workspaceFolder}/.vscode/run_frps.cmd ${config:WSL_IP} ${config:FRPS_PATH} ${workspaceFolder}"
+            }
+        },
+        {
+            "label": "omniverse streaming client wsl",
+            "type": "shell",
+            "windows": {
+                "command": "${config:KIT_REMOTE_PATH_WIN}/kit-remote.exe --width 2560 --height 1440 --server ${config:WSL_IP}"
+            },
+        },
+        {
+            "label": "omniverse streaming client cloud",
+            "type": "shell",
+            "windows": {
+                "command": "${config:KIT_REMOTE_PATH_WIN}/kit-remote.exe --width 1920 --height 1080 --server ${config:CLOUD_IP}"
+            },
+        },
+        {
+            "label": "omniverse streaming client specific ip",
+            "type": "shell",
+            "windows": {
+                "command": "${config:KIT_REMOTE_PATH_WIN}/kit-remote.exe --width 1920 --height 1080 --server ${input:streaming_ip}"
+            },
+        }
+    ],
+    "inputs": [
+        {
+            "id": "frp_server_ip",
+            "description": "frp server ip:",
+            "type": "promptString"
+        },
+        {
+            "id": "streaming_ip",
+            "description": "streaming ip:",
+            "type": "promptString"
+        },
+    ]
+}
