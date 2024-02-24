@@ -65,7 +65,7 @@ import_config.default_position_drive_damping = 0.0
 import_config.convex_decomp = False
 import_config.self_collision = False
 import_config.create_physics_scene = True
-import_config.make_default_prim = True
+import_config.make_default_prim = False
 
 # Get path to extension data:
 URDF_PATH = "balance_infantry/model.urdf"
@@ -112,7 +112,7 @@ right_back_joint_prim.GetUpperLimitAttr().Set(-LOWER_LIMIT_ANGLE)
 # Set constraint
 left_wheel_link = stage.GetPrimAtPath("/balance_infantry/left_wheel_link")
 left_hole_link = stage.GetPrimAtPath("/balance_infantry/left_hole_link")
-left_constraint = UsdPhysics.RevoluteJoint.Define(stage, "/balance_infantry/left_constraint")
+left_constraint = UsdPhysics.RevoluteJoint.Define(stage, "/balance_infantry/base_link/left_constraint")
 left_constraint.CreateBody0Rel().SetTargets([left_wheel_link.GetPath()])
 left_constraint.CreateBody1Rel().SetTargets([left_hole_link.GetPath()])
 left_constraint.CreateAxisAttr().Set("X")
@@ -121,7 +121,7 @@ left_constraint.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
 left_constraint.CreateExcludeFromArticulationAttr().Set(True)
 right_wheel_link = stage.GetPrimAtPath("/balance_infantry/right_wheel_link")
 right_hole_link = stage.GetPrimAtPath("/balance_infantry/right_hole_link")
-right_constraint = UsdPhysics.RevoluteJoint.Define(stage, "/balance_infantry/right_constraint")
+right_constraint = UsdPhysics.RevoluteJoint.Define(stage, "/balance_infantry/base_link/right_constraint")
 right_constraint.CreateBody0Rel().SetTargets([right_wheel_link.GetPath()])
 right_constraint.CreateBody1Rel().SetTargets([right_hole_link.GetPath()])
 right_constraint.CreateAxisAttr().Set("X")
@@ -221,12 +221,12 @@ while kit._app.is_running() and not kit.is_exiting():
         dc.set_dof_effort(right_front_joint, -torque)
         dc.set_dof_effort(right_back_joint, torque)
 
-    imu_data = imu_sensor.get_current_frame()
-    quaternion = imu_data['orientation']
-    # quaternion = [1.0, 0.0, 0.0, 0.0]
-    rotation = quaternion_to_euler(quaternion)
-    euler_angles_deg = np.degrees(rotation)
-    print(f"quaternion: {quaternion}, angle: {euler_angles_deg}")
+    # imu_data = imu_sensor.get_current_frame()
+    # quaternion = imu_data['orientation']
+    # # quaternion = [1.0, 0.0, 0.0, 0.0]
+    # rotation = quaternion_to_euler(quaternion)
+    # euler_angles_deg = np.degrees(rotation)
+    # print(f"quaternion: {quaternion}, angle: {euler_angles_deg}")
 
     kit.update()
 

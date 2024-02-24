@@ -58,6 +58,17 @@ class CartpoleTask(BaseTask):
         # add the Cartpole USD to our stage
         create_prim(prim_path="/World/Cartpole", prim_type="Xform", position=self._cartpole_position)
         add_reference_to_stage(usd_path, "/World/Cartpole")
+        
+        # Get stage handle
+        stage = omni.usd.get_context().get_stage()
+        if not stage:
+            print("Stage could not be used.")
+        else:
+            for prim in stage.Traverse():
+                prim_path = prim.GetPath()
+                prim_type = prim.GetTypeName()
+
+                print(f"prim_path: {prim_path}, prim_type: {prim_type}")
         # create an ArticulationView wrapper for our cartpole - this can be extended towards accessing multiple cartpoles
         self._cartpoles = ArticulationView(prim_paths_expr="/World/Cartpole*", name="cartpole_view")
         # add Cartpole ArticulationView and ground plane to the Scene
