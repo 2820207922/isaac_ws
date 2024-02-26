@@ -5,7 +5,9 @@ from omni.isaac.core.utils.prims import create_prim
 
 from omni.isaac.core.utils.viewports import set_camera_view
 
-from omni.isaac.sensor import _sensor
+from omni.isaac.core.materials.deformable_material import DeformableMaterial
+from pxr import Gf, PhysxSchema, Sdf, UsdLux, UsdPhysics, Tf, UsdShade
+from omni.importer.urdf import _urdf
 import omni.kit.commands
 
 from gymnasium import spaces
@@ -21,14 +23,14 @@ class BalanceTask(BaseTask):
     ) -> None:
         # print("running: __init__")
         # task-specific parameters
-        self._robot_default_position = [0.0, 0.0, 0.5]
-        self._robot_default_orientation = [1.0, 0.0, 0.0, 0.0]
+        self._robot_default_position = [0.0, 0.0, 1.0]
         self._pos_limit = 1.221731
-        self._vel_limit = 1.0
-        self._effort_limit = 10.0
+        self._vel_limit = 5.0
+        self._effort_leg_limit = 10.0
+        self._effort_wheel_limit = 20.0
         self._angle_target = 0.0
         self._angel_limit = 1.221731
-        self._height_target = 0.16
+        self._height_target = 0.2
         self._height_limit = 0.45
 
         # values used for defining RL buffers
@@ -39,6 +41,7 @@ class BalanceTask(BaseTask):
 
         # a few class buffers to store RL-related states
         self.obs = torch.zeros((self.num_envs, self._num_observations))
+        self.obs_last = torch.zeros((self.num_envs, self._num_observations))
         self.resets = torch.zeros((self.num_envs, 1))
 
         # set the action and observation space for RL
@@ -57,28 +60,62 @@ class BalanceTask(BaseTask):
     def set_up_scene(self, scene) -> None:
         # print("running: set_up_scene")
         # retrieve file path for the Cartpole USD file
-        usd_path = "/root/isaac_ws/balance_infantry/model/balance_infantry.usd"
+        # usd_path = "balance_infantry/model/balance_infantry_no_constraint.usd"
+        
         # add the Cartpole USD to our stage
         # create_prim(prim_path="/World", prim_type="Xform", position=self._robot_default_position)
-        add_reference_to_stage(usd_path, "/World")
+
+        # Set the settings in the import config
+        import_config = _urdf.ImportConfig()
+        import_config.merge_fixed_joints = False
+        import_config.fix_base = False
+        import_config.import_inertia_tensor = True
+        import_config.distance_scale = 1.0
+        import_config.density = 0.0
+        import_config.default_drive_type = _urdf.UrdfJointTargetType.JOINT_DRIVE_VELOCITY
+        import_config.default_drive_strength = 0.0
+        import_config.default_position_drive_damping = 0.0
+        import_config.convex_decomp = False
+        import_config.self_collision = False
+        import_config.create_physics_scene = True
+        import_config.make_default_prim = False
+
+        urdf_path = "balance_infantry/model.urdf"
+
+        status, robot_path = omni.kit.commands.execute(
+            "URDFParseAndImportFile",
+            urdf_path=urdf_path,
+            import_config=import_config,
+            # get_articulation_root=True,
+        )
+
+        add_reference_to_stage(robot_path, "/World")
 
         # Get stage handle
-        # stage = omni.usd.get_context().get_stage()
-        # if not stage:
-        #     print("Stage could not be used.")
-        # else:
-        #     for prim in stage.Traverse():
-        #         prim_path = prim.GetPath()
-        #         prim_type = prim.GetTypeName()
-        #         print(f"prim_path: {prim_path}, prim_type: {prim_type}")
+        self.stage = omni.usd.get_context().get_stage()
+        if not self.stage:
+            print("Stage could not be used.")
+        else:
+            for prim in self.stage.Traverse():
+                prim_path = prim.GetPath()
+                prim_type = prim.GetTypeName()
+                print(f"prim_path: {prim_path}, prim_type: {prim_type}")
 
         # create an ArticulationView wrapper for our cartpole - this can be extended towards accessing multiple cartpoles
         self._robots = ArticulationView(prim_paths_expr="/World/balance_infantry/base_link*", name="robot_view")
-        self._imu_reader = _sensor.acquire_imu_sensor_interface()
 
-        # add Cartpole ArticulationView and ground plane to the Scene
         scene.add(self._robots)
-        scene.add_default_ground_plane()
+        # scene.add_default_ground_plane()
+        # Add ground plane
+        omni.kit.commands.execute(
+            "AddGroundPlaneCommand",
+            stage=self.stage,
+            planePath="/groundPlane",
+            axis="Z",
+            size=150.0,
+            position=Gf.Vec3f(0, 0, -0.3),
+            color=Gf.Vec3f(0.2),
+        )
 
         # set default camera viewport position and target
         self.set_initial_camera_params()
@@ -88,6 +125,7 @@ class BalanceTask(BaseTask):
 
     def post_reset(self):
         # print("running: post_reset")
+        self.robot_init()
         self._base_link_idx = self._robots.get_body_index("base_link")
         self._joint1_idx = self._robots.get_dof_index("joint1")
         self._joint2_idx = self._robots.get_dof_index("joint2")
@@ -106,6 +144,61 @@ class BalanceTask(BaseTask):
         indices = torch.arange(self._robots.count, dtype=torch.int64, device=self._device)
         self.reset(indices)
     
+    def robot_init(self):
+        # Set limit
+        LOWER_LIMIT_ANGLE = 0
+        UPPER_LIMIT_ANGLE = 70
+        left_front_joint_prim = UsdPhysics.RevoluteJoint.Get(self.stage, "/World/balance_infantry/base_link/joint1")
+        left_front_joint_prim.GetLowerLimitAttr().Set(LOWER_LIMIT_ANGLE)
+        left_front_joint_prim.GetUpperLimitAttr().Set(UPPER_LIMIT_ANGLE)
+        left_back_joint_prim = UsdPhysics.RevoluteJoint.Get(self.stage, "/World/balance_infantry/base_link/joint2")
+        left_back_joint_prim.GetLowerLimitAttr().Set(-UPPER_LIMIT_ANGLE)
+        left_back_joint_prim.GetUpperLimitAttr().Set(-LOWER_LIMIT_ANGLE)
+        right_front_joint_prim = UsdPhysics.RevoluteJoint.Get(self.stage, "/World/balance_infantry/base_link/joint7")
+        right_front_joint_prim.GetLowerLimitAttr().Set(LOWER_LIMIT_ANGLE)
+        right_front_joint_prim.GetUpperLimitAttr().Set(UPPER_LIMIT_ANGLE)
+        right_back_joint_prim = UsdPhysics.RevoluteJoint.Get(self.stage, "/World/balance_infantry/base_link/joint6")
+        right_back_joint_prim.GetLowerLimitAttr().Set(-UPPER_LIMIT_ANGLE)
+        right_back_joint_prim.GetUpperLimitAttr().Set(-LOWER_LIMIT_ANGLE)
+        # Set constraint
+        left_wheel_link = self.stage.GetPrimAtPath("/World/balance_infantry/left_wheel_link")
+        left_hole_link = self.stage.GetPrimAtPath("/World/balance_infantry/left_hole_link")
+        left_constraint = UsdPhysics.RevoluteJoint.Define(self.stage, "/World/balance_infantry/base_link/left_constraint")
+        left_constraint.CreateBody0Rel().SetTargets([left_wheel_link.GetPath()])
+        left_constraint.CreateBody1Rel().SetTargets([left_hole_link.GetPath()])
+        left_constraint.CreateAxisAttr().Set("X")
+        left_constraint.CreateLocalPos0Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+        left_constraint.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+        left_constraint.CreateExcludeFromArticulationAttr().Set(True)
+        
+        right_wheel_link = self.stage.GetPrimAtPath("/World/balance_infantry/right_wheel_link")
+        right_hole_link = self.stage.GetPrimAtPath("/World/balance_infantry/right_hole_link")
+        right_constraint = UsdPhysics.RevoluteJoint.Define(self.stage, "/World/balance_infantry/base_link/right_constraint")
+        right_constraint.CreateBody0Rel().SetTargets([right_wheel_link.GetPath()])
+        right_constraint.CreateBody1Rel().SetTargets([right_hole_link.GetPath()])
+        right_constraint.CreateAxisAttr().Set("X")
+        right_constraint.CreateLocalPos0Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+        right_constraint.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
+        right_constraint.CreateExcludeFromArticulationAttr().Set(True)
+
+        # Set material
+        self.wheel_material = DeformableMaterial(
+                prim_path="/World/balance_infantry/base_link/wheel_material",
+                name="wheel_material",
+                dynamic_friction=0.5,
+                youngs_modulus=6e6,
+                poissons_ratio=0.47,
+                elasticity_damping=0.00784,
+                damping_scale=0.1,
+            )
+        # print("wheel_material: ", self.wheel_material)
+        wheel_material_prim = self.stage.GetPrimAtPath("/World/balance_infantry/base_link/wheel_material")
+        # print("wheel_material_prim: ", wheel_material_prim)
+        wheel_material_shade = UsdShade.Material(wheel_material_prim)
+        # print("wheel_material_shade: ", wheel_material_shade)
+        UsdShade.MaterialBindingAPI(left_wheel_link).Bind(wheel_material_shade, UsdShade.Tokens.strongerThanDescendants)
+        UsdShade.MaterialBindingAPI(right_wheel_link).Bind(wheel_material_shade, UsdShade.Tokens.strongerThanDescendants)
+
     def reset(self, env_ids=None):
         # print("running: reset")
         if env_ids is None:
@@ -134,7 +227,7 @@ class BalanceTask(BaseTask):
 
         # apply resets
         indices = env_ids.to(dtype=torch.int32)
-        self._robots.post_reset()
+        # self._robots.post_reset()
         # self._robots.set_world_poses(positions, orientations, indices=indices)
         # self._robots.set_joint_positions(dof_pos, indices=indices, joint_indices=torch.tensor([self._joint1_idx, self._joint2_idx, self._joint6_idx, self._joint7_idx]))
         # self._robots.set_joint_velocities(dof_vel, indices=indices, joint_indices=torch.tensor([self._joint1_idx, self._joint2_idx, self._joint6_idx, self._joint7_idx, self._joint4_idx, self._joint9_idx]))
@@ -149,37 +242,45 @@ class BalanceTask(BaseTask):
         if len(reset_env_ids) > 0:
             self.reset(reset_env_ids)
 
-        actions = torch.tensor(actions)
         # print("actions: ", actions)
 
         forces = torch.zeros((self._robots.count, 6), dtype=torch.float32, device=self._device)
-        forces[:, 0] = self._effort_limit * actions[0]
-        forces[:, 1] = self._effort_limit * actions[1]
-        forces[:, 2] = self._effort_limit * actions[2]
-        forces[:, 3] = self._effort_limit * actions[3]
-        forces[:, 4] = self._effort_limit * actions[4]
-        forces[:, 5] = self._effort_limit * actions[5]
+        forces[:, 0] = self._effort_leg_limit * actions[0]
+        forces[:, 1] = self._effort_leg_limit * actions[1]
+        forces[:, 2] = self._effort_leg_limit * actions[2]
+        forces[:, 3] = self._effort_leg_limit * actions[3]
+        forces[:, 4] = self._effort_wheel_limit * actions[4]
+        forces[:, 5] = self._effort_wheel_limit * actions[5]
 
         indices = torch.arange(self._robots.count, dtype=torch.int32, device=self._device)
         self._robots.set_joint_efforts(forces, indices=indices, joint_indices=torch.tensor([self._joint1_idx, self._joint2_idx, self._joint6_idx, self._joint7_idx, self._joint4_idx, self._joint9_idx]))
 
     def get_observations(self):
         # print("running: get_observations")
-        # imu_data = self._imu_reader.get_sensor_reading(self._robots.prim_paths[0] + "/imu_sensor", use_latest_data = True, read_gravity = False)
-        # print("imu_data.is_valid: ", imu_data.is_valid)
-        # print("imu_data.orientation: ", imu_data.orientation)
         positions, orientations = self._robots.get_world_poses()
-        if torch.isnan(orientations).any():
-            self.reset()
-            return
+        
+        # positions_check = torch.where(positions[:, 2] > 10.0, 1, 0)
+        # if positions_check.item() == 1:
+        #     self.reset()
+        #     return
+        
+        # if torch.isnan(positions).any() or torch.isnan(orientations).any():
+        #     self.reset()
+        #     return
         # print("positions: ", positions)
         # print("orientations: ", orientations)
         angle = self.quaternion_to_euler_zxy(orientations)
-        # print("angle: ", angle * 180 / math.pi)
+        # print(f"roll_x: {angle[:, 1] * 180 / math.pi}, picth_y: {angle[:, 2] * 180 / math.pi}")
+
+        if torch.isnan(angle).any():
+            return
 
         # collect joint positions and velocities for observation
         dof_pos = self._robots.get_joint_positions()
         dof_vel = self._robots.get_joint_velocities()
+
+        if torch.isnan(dof_pos).any() or torch.isnan(dof_vel).any():
+            return
 
         joint1_pos = dof_pos[:, self._joint1_idx]
         joint1_vel = dof_vel[:, self._joint1_idx]
@@ -192,6 +293,8 @@ class BalanceTask(BaseTask):
 
         joint4_vel = dof_vel[:, self._joint4_idx]
         joint9_vel = dof_vel[:, self._joint9_idx]
+
+        self.obs_last = self.obs.clone()
 
         self.obs[:, 0] = angle[:, 1]
         self.obs[:, 1] = angle[:, 2]
@@ -234,6 +337,8 @@ class BalanceTask(BaseTask):
 
         roll_x = self.obs[:, 0]
         pitch_y = self.obs[:, 1]
+        roll_x_last = self.obs_last[:, 0]
+        pitch_y_last = self.obs_last[:, 1]
 
         joint1_pos = self.obs[:, 2]
         joint2_pos = self.obs[:, 3]
@@ -249,8 +354,12 @@ class BalanceTask(BaseTask):
 
         left_height = self.calc_height(joint1_pos, joint2_pos)
         right_height = self.calc_height(joint6_pos, joint7_pos)
+
+        reward_roll_x = -6.0 * (torch.abs(roll_x) + torch.abs(roll_x - roll_x_last)) / self._angel_limit
+        reward_pitch_y = -3.0 * (torch.abs(pitch_y) + torch.abs(pitch_y - pitch_y_last)) / self._angel_limit
+        reward_height = -1.0 * torch.abs((self._height_target - (left_height + right_height) / 2) / self._height_limit)
         
-        reward = 1.0 - 2.0 * torch.abs(roll_x / self._angel_limit) - 2.0 * torch.abs(pitch_y / self._angel_limit) - 1.0 * torch.abs((self._height_target - (left_height + right_height) / 2) / self._height_limit)
+        reward = 10.0 + reward_roll_x + reward_pitch_y + reward_height
 
         return reward.item()
 

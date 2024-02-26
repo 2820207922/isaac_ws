@@ -1,3 +1,4 @@
 OmniIsaacGymEnvs
 *.etli
 *tensorboard
+core

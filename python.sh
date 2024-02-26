@@ -8,7 +8,7 @@ error_exit()
     exit 1
 }
 
-SCRIPT_DIR="/root/isaac-sim"
+SCRIPT_DIR="/home/u2021210476/isaac-sim"
 # SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # MY_DIR="$(realpath -s "$SCRIPT_DIR")"
 

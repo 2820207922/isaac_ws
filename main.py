@@ -135,8 +135,8 @@ omni.kit.commands.execute(
     planePath="/groundPlane",
     axis="Z",
     size=150.0,
-    position=Gf.Vec3f(0, 0, -0.5),
-    color=Gf.Vec3f(0.5),
+    position=Gf.Vec3f(0, 0, -0.3),
+    color=Gf.Vec3f(0.3),
 )
 
 # Add lighting
@@ -162,7 +162,7 @@ dof_properties = _dynamic_control.DofProperties()
 dof_properties.damping = 0.0
 dof_properties.stiffness = 0.0
 dof_properties.max_effort = 100.0
-dof_properties.max_velocity = 1.5
+dof_properties.max_velocity = 10.0
 left_constraint = dc.find_articulation_dof(art.articulation_handle, "left_constraint")
 right_constraint = dc.find_articulation_dof(art.articulation_handle, "right_constraint")
 dc.set_dof_properties(left_constraint, dof_properties)
@@ -171,7 +171,7 @@ dc.set_dof_properties(right_constraint, dof_properties)
 dof_properties.damping = 100.0
 dof_properties.stiffness = 0.0
 dof_properties.max_effort = 100.0
-dof_properties.max_velocity = 1.5
+dof_properties.max_velocity = 10.0
 
 left_wheel_joint = dc.find_articulation_dof(art.articulation_handle, "joint4")
 right_wheel_joint = dc.find_articulation_dof(art.articulation_handle, "joint9")
@@ -187,13 +187,13 @@ dc.set_dof_properties(left_back_joint, dof_properties)
 dc.set_dof_properties(right_front_joint, dof_properties)
 dc.set_dof_properties(right_back_joint, dof_properties)
 # Set IMU sensor
-imu_sensor = IMUSensor(
-    prim_path="/balance_infantry/base_link/imu_sensor",
-    name="imu",
-    frequency=100,
-    translation=np.array([0.0, -0.2, 0.1]),
-)
-imu_sensor.initialize()
+# imu_sensor = IMUSensor(
+#     prim_path="/balance_infantry/base_link/imu_sensor",
+#     name="imu",
+#     frequency=100,
+#     translation=np.array([0.0, -0.2, 0.1]),
+# )
+# imu_sensor.initialize()
 
 if not stage:
     print("Stage could not be used.")

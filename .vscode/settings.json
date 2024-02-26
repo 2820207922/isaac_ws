@@ -1,6 +1,6 @@
 {
     "python.defaultInterpreterPath": "${config:ISAAC_SIM_PATH}/kit/python/python.exe",
-    "FRPC_PATH": "/root/frp",
+    "FRPC_PATH": "/home/u2021210476/frp_0.53.2_linux_amd64",
     "FRPS_PATH": "/home/jameshoi/frp_0.53.2_linux_amd64",
     "ISAAC_SIM_PATH_LINUX": "/root/isaac-sim",
     "ISAAC_SIM_PATH_WIN": "C:/Users/JamesHoi/AppData/Local/ov/pkg/isaac_sim-2023.1.1",
@@ -11,7 +11,7 @@
     // your pc cannot connect, client choose wrong ip, so use wsl as bridge
     "WSL_IP": "172.29.15.193",
     // local ip
-    "USER0_IP": "192.168.0.19",
+    "USER0_IP": "10.29.83.238",
     "USER1_IP": "10.129.66.82",
     // cloud, because of bug, you cannot connect while in same lan
     "CLOUD_IP": "8.130.144.251",
