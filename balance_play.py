@@ -11,14 +11,14 @@ env.set_task(task, backend="torch")
 from stable_baselines3 import PPO
 
 # Run inference on the trained policy
-model = PPO.load("ppo_balance")
+model = PPO.load("models/ppo/ppo_balance0")
 env._world.reset()
 obs, _ = env.reset()
 while env._simulation_app.is_running():
     action, _states = model.predict(obs)
     obs, rewards, terminated, truncated, info = env.step(action[0])
     # print(f"obs: {obs}")
-    print(f"action: {action}")
+    # print(f"action: {action}")
     # print(f"obs: {obs}, rewards: {rewards}, terminated: {terminated}, truncated: {truncated}, info: {info}")
 
 env.close()

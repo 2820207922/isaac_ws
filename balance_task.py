@@ -23,18 +23,20 @@ class BalanceTask(BaseTask):
     ) -> None:
         # print("running: __init__")
         # task-specific parameters
-        self._robot_default_position = [0.0, 0.0, 1.0]
-        self._pos_limit = 1.221731
-        self._vel_limit = 5.0
+        self._reward_cnt = 0
+
+        self._orders = [0, 1, 2, 3]
+        self._left_wheel_target = 0.0
+        self._right_wheel_target = 0.0
+
+        self._angle_limit = 90.0 * math.pi / 180
+        self._vel_wheel_limit = 50.0
         self._effort_leg_limit = 10.0
         self._effort_wheel_limit = 20.0
-        self._angle_target = 0.0
-        self._angel_limit = 1.221731
-        self._height_target = 0.2
-        self._height_limit = 0.45
+
 
         # values used for defining RL buffers
-        self._num_observations = 12
+        self._num_observations = 15
         self._num_actions = 6
         self._device = "cpu"
         self.num_envs = 1
@@ -63,7 +65,6 @@ class BalanceTask(BaseTask):
         # usd_path = "balance_infantry/model/balance_infantry_no_constraint.usd"
         
         # add the Cartpole USD to our stage
-        # create_prim(prim_path="/World", prim_type="Xform", position=self._robot_default_position)
 
         # Set the settings in the import config
         import_config = _urdf.ImportConfig()
@@ -101,6 +102,28 @@ class BalanceTask(BaseTask):
                 prim_type = prim.GetTypeName()
                 print(f"prim_path: {prim_path}, prim_type: {prim_type}")
 
+
+        # Set material
+        self.wheel_material = DeformableMaterial(
+                prim_path="/World/balance_infantry/base_link/wheel_material",
+                name="wheel_material",
+                dynamic_friction=0.5,
+                youngs_modulus=6e6,
+                poissons_ratio=0.47,
+                elasticity_damping=0.00784,
+                damping_scale=0.1,
+            )
+        # print("wheel_material: ", self.wheel_material)
+        wheel_material_prim = self.stage.GetPrimAtPath("/World/balance_infantry/base_link/wheel_material")
+        # print("wheel_material_prim: ", wheel_material_prim)
+        wheel_material_shade = UsdShade.Material(wheel_material_prim)
+        # print("wheel_material_shade: ", wheel_material_shade)
+        left_wheel_link = self.stage.GetPrimAtPath("/World/balance_infantry/left_wheel_link")
+        right_wheel_link = self.stage.GetPrimAtPath("/World/balance_infantry/right_wheel_link")
+        UsdShade.MaterialBindingAPI(left_wheel_link).Bind(wheel_material_shade, UsdShade.Tokens.strongerThanDescendants)
+        UsdShade.MaterialBindingAPI(right_wheel_link).Bind(wheel_material_shade, UsdShade.Tokens.strongerThanDescendants)
+
+
         # create an ArticulationView wrapper for our cartpole - this can be extended towards accessing multiple cartpoles
         self._robots = ArticulationView(prim_paths_expr="/World/balance_infantry/base_link*", name="robot_view")
 
@@ -113,7 +136,7 @@ class BalanceTask(BaseTask):
             planePath="/groundPlane",
             axis="Z",
             size=150.0,
-            position=Gf.Vec3f(0, 0, -0.3),
+            position=Gf.Vec3f(0, 0, -0.2),
             color=Gf.Vec3f(0.2),
         )
 
@@ -126,6 +149,15 @@ class BalanceTask(BaseTask):
     def post_reset(self):
         # print("running: post_reset")
         self.robot_init()
+        # randomize all envs
+        indices = torch.arange(self._robots.count, dtype=torch.int64, device=self._device)
+        self.reset(indices)
+    
+    def robot_init(self):
+        self._height_lower_limit = self.calc_height(torch.tensor([0.0]), torch.tensor([0.0]))
+        self._height_upper_limit = self.calc_height(torch.tensor([1.2217]), torch.tensor([1.2217]))
+        self._height_target = 0.2
+        # Get joint index
         self._base_link_idx = self._robots.get_body_index("base_link")
         self._joint1_idx = self._robots.get_dof_index("joint1")
         self._joint2_idx = self._robots.get_dof_index("joint2")
@@ -140,11 +172,7 @@ class BalanceTask(BaseTask):
         # print("joint6_idx: ", self._joint6_idx)
         # print("joint7_idx: ", self._joint7_idx)
         # print("joint9_idx: ", self._joint9_idx)
-        # randomize all envs
-        indices = torch.arange(self._robots.count, dtype=torch.int64, device=self._device)
-        self.reset(indices)
-    
-    def robot_init(self):
+
         # Set limit
         LOWER_LIMIT_ANGLE = 0
         UPPER_LIMIT_ANGLE = 70
@@ -160,6 +188,7 @@ class BalanceTask(BaseTask):
         right_back_joint_prim = UsdPhysics.RevoluteJoint.Get(self.stage, "/World/balance_infantry/base_link/joint6")
         right_back_joint_prim.GetLowerLimitAttr().Set(-UPPER_LIMIT_ANGLE)
         right_back_joint_prim.GetUpperLimitAttr().Set(-LOWER_LIMIT_ANGLE)
+
         # Set constraint
         left_wheel_link = self.stage.GetPrimAtPath("/World/balance_infantry/left_wheel_link")
         left_hole_link = self.stage.GetPrimAtPath("/World/balance_infantry/left_hole_link")
@@ -181,58 +210,36 @@ class BalanceTask(BaseTask):
         right_constraint.CreateLocalPos1Attr().Set(Gf.Vec3f(0.0, 0.0, 0.0))
         right_constraint.CreateExcludeFromArticulationAttr().Set(True)
 
-        # Set material
-        self.wheel_material = DeformableMaterial(
-                prim_path="/World/balance_infantry/base_link/wheel_material",
-                name="wheel_material",
-                dynamic_friction=0.5,
-                youngs_modulus=6e6,
-                poissons_ratio=0.47,
-                elasticity_damping=0.00784,
-                damping_scale=0.1,
-            )
-        # print("wheel_material: ", self.wheel_material)
-        wheel_material_prim = self.stage.GetPrimAtPath("/World/balance_infantry/base_link/wheel_material")
-        # print("wheel_material_prim: ", wheel_material_prim)
-        wheel_material_shade = UsdShade.Material(wheel_material_prim)
-        # print("wheel_material_shade: ", wheel_material_shade)
-        UsdShade.MaterialBindingAPI(left_wheel_link).Bind(wheel_material_shade, UsdShade.Tokens.strongerThanDescendants)
-        UsdShade.MaterialBindingAPI(right_wheel_link).Bind(wheel_material_shade, UsdShade.Tokens.strongerThanDescendants)
-
     def reset(self, env_ids=None):
         # print("running: reset")
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, device=self._device)
         num_resets = len(env_ids)
 
-        positions = torch.zeros((num_resets, 3), device=self._device)
-        orientations = torch.zeros((num_resets, 4), device=self._device)
-        orientations[:, 0] = 1.0
+        if self._orders[0] == 0:
+            self._left_wheel_target = 0.0
+            self._right_wheel_target = 0.0
+            self._height_target = 0.2
+        elif self._orders[0] == 1:
+            uniform_num = 1.0 * (1.0 - 2.0 * torch.rand(2, device=self._device))
+            self._left_wheel_target = uniform_num[0]
+            self._right_wheel_target = uniform_num[1]
+            self._height_target = 0.2
+        elif self._orders[0] == 2:
+            uniform_num = 1.0 * (1.0 - 2.0 * torch.rand(1, device=self._device))
+            self._left_wheel_target = 0.0
+            self._right_wheel_target = 0.0
+            self._height_target = uniform_num[0]
+        elif self._orders[0] == 3:
+            uniform_num = 1.0 * (1.0 - 2.0 * torch.rand(2, device=self._device))
+            self._left_wheel_target = uniform_num[0]
+            self._right_wheel_target = uniform_num[1]
+            uniform_num = 1.0 * (1.0 - 2.0 * torch.rand(1, device=self._device))
+            self._height_target = uniform_num[0]
 
-        # randomize DOF positions
-        dof_pos = torch.zeros((num_resets, 4), device=self._device)
-        # dof_pos[:, 0] = self._pos_limit * torch.rand(num_resets, device=self._device)
-        # dof_pos[:, 1] = - self._pos_limit * torch.rand(num_resets, device=self._device)
-        # dof_pos[:, 2] = - self._pos_limit * torch.rand(num_resets, device=self._device)
-        # dof_pos[:, 3] = self._pos_limit * torch.rand(num_resets, device=self._device)
+        print(f"left_wheel_target: {self._left_wheel_target}, right_wheel_target: {self._right_wheel_target}, height_target: {self._height_target}")
 
-        # randomize DOF velocities
-        dof_vel = torch.zeros((num_resets, 6), device=self._device)
-        # dof_vel[:, 0] = self._vel_limit * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
-        # dof_vel[:, 1] = self._vel_limit * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
-        # dof_vel[:, 2] = self._vel_limit * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
-        # dof_vel[:, 3] = self._vel_limit * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
-        # dof_vel[:, 4] = self._vel_limit * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
-        # dof_vel[:, 5] = self._vel_limit * (1.0 - 2.0 * torch.rand(num_resets, device=self._device))
-
-        # apply resets
-        indices = env_ids.to(dtype=torch.int32)
-        # self._robots.post_reset()
-        # self._robots.set_world_poses(positions, orientations, indices=indices)
-        # self._robots.set_joint_positions(dof_pos, indices=indices, joint_indices=torch.tensor([self._joint1_idx, self._joint2_idx, self._joint6_idx, self._joint7_idx]))
-        # self._robots.set_joint_velocities(dof_vel, indices=indices, joint_indices=torch.tensor([self._joint1_idx, self._joint2_idx, self._joint6_idx, self._joint7_idx, self._joint4_idx, self._joint9_idx]))
-        
-        # print("self._robots.get_world_poses(): ", self._robots.get_world_poses())
+        self._robots.post_reset()
         # bookkeeping
         self.resets[env_ids] = 0
 
@@ -296,20 +303,25 @@ class BalanceTask(BaseTask):
 
         self.obs_last = self.obs.clone()
 
-        self.obs[:, 0] = angle[:, 1]
-        self.obs[:, 1] = angle[:, 2]
+        self.obs[:, 0] = self._left_wheel_target
+        self.obs[:, 1] = self._right_wheel_target
+        self.obs[:, 2] = self._height_target
 
-        self.obs[:, 2] = joint1_pos
-        self.obs[:, 3] = joint2_pos
-        self.obs[:, 4] = joint6_pos
-        self.obs[:, 5] = joint7_pos
-        self.obs[:, 6] = joint1_vel
-        self.obs[:, 7] = joint2_vel
-        self.obs[:, 8] = joint6_vel
-        self.obs[:, 9] = joint7_vel
+        self.obs[:, 3] = angle[:, 1]
+        self.obs[:, 4] = angle[:, 2]
 
-        self.obs[:, 10] = joint4_vel
-        self.obs[:, 11] = joint9_vel
+        self.obs[:, 5] = joint1_pos
+        self.obs[:, 6] = joint2_pos
+        self.obs[:, 7] = joint6_pos
+        self.obs[:, 8] = joint7_pos
+
+        self.obs[:, 9] = joint1_vel
+        self.obs[:, 10] = joint2_vel
+        self.obs[:, 11] = joint6_vel
+        self.obs[:, 12] = joint7_vel
+
+        self.obs[:, 13] = joint4_vel
+        self.obs[:, 14] = joint9_vel
 
         # print("obs: ", self.obs)
 
@@ -334,32 +346,54 @@ class BalanceTask(BaseTask):
 
     def calculate_metrics(self) -> None:
         # print("running: calculate_metrics")
+        left_wheel_target = self.obs[:, 0]
+        right_wheel_target = self.obs[:, 1]
+        height_target = self.obs[:, 2]
+        # print(f"left_wheel_target: {left_wheel_target}, right_wheel_target: {right_wheel_target}, height_target: {height_target}")
 
-        roll_x = self.obs[:, 0]
-        pitch_y = self.obs[:, 1]
-        roll_x_last = self.obs_last[:, 0]
-        pitch_y_last = self.obs_last[:, 1]
+        roll_x = self.obs[:, 3]
+        pitch_y = self.obs[:, 4]
 
-        joint1_pos = self.obs[:, 2]
-        joint2_pos = self.obs[:, 3]
-        joint6_pos = self.obs[:, 4]
-        joint7_pos = self.obs[:, 5]
-        joint1_vel = self.obs[:, 6]
-        joint2_vel = self.obs[:, 7]
-        joint6_vel = self.obs[:, 8]
-        joint7_vel = self.obs[:, 9]
+        joint1_pos = self.obs[:, 5]
+        joint2_pos = self.obs[:, 6]
+        joint6_pos = self.obs[:, 7]
+        joint7_pos = self.obs[:, 8]
 
-        joint4_vel = self.obs[:, 10]
-        joint9_vel = self.obs[:, 11]
+        joint1_vel = self.obs[:, 9]
+        joint2_vel = self.obs[:, 10]
+        joint6_vel = self.obs[:, 11]
+        joint7_vel = self.obs[:, 12]
+
+        joint4_vel = self.obs[:, 13]
+        joint9_vel = self.obs[:, 14]
+        # print(f"joint4_vel: {joint4_vel}, joint9_vel: {joint9_vel}")
+
+        roll_x_last = self.obs_last[:, 3]
+        pitch_y_last = self.obs_last[:, 4]
+        joint1_pos_last = self.obs_last[:, 5]
+        joint2_pos_last = self.obs_last[:, 6]
+        joint6_pos_last = self.obs_last[:, 7]
+        joint7_pos_last = self.obs_last[:, 8]
 
         left_height = self.calc_height(joint1_pos, joint2_pos)
         right_height = self.calc_height(joint6_pos, joint7_pos)
+        height_current = (left_height + right_height) / 2
 
-        reward_roll_x = -6.0 * (torch.abs(roll_x) + torch.abs(roll_x - roll_x_last)) / self._angel_limit
-        reward_pitch_y = -3.0 * (torch.abs(pitch_y) + torch.abs(pitch_y - pitch_y_last)) / self._angel_limit
-        reward_height = -1.0 * torch.abs((self._height_target - (left_height + right_height) / 2) / self._height_limit)
+        left_height_last = self.calc_height(joint1_pos_last, joint2_pos_last)
+        right_height_last = self.calc_height(joint6_pos_last, joint7_pos_last)
+        height_last = (left_height_last + right_height_last) / 2
+
+        reward_roll_x = -0.8 * torch.abs(roll_x / self._angle_limit + (roll_x - roll_x_last) / self._angle_limit)
+        reward_pitch_y = -0.5 * torch.abs(pitch_y / self._angle_limit + (pitch_y - pitch_y_last) / self._angle_limit)
+        reward_wheel_vel = -0.3 * (torch.abs(left_wheel_target - joint4_vel / self._vel_wheel_limit) + torch.abs(right_wheel_target - joint9_vel / self._vel_wheel_limit))
+        reward_height = -0.5 * torch.abs(height_target - height_current / (self._height_upper_limit - self._height_lower_limit))
         
-        reward = 10.0 + reward_roll_x + reward_pitch_y + reward_height
+        reward = 1.5 + reward_roll_x + reward_pitch_y + reward_wheel_vel + reward_height
+        # print(f"reward: {reward.item()}")
+
+        if reward.item() > 0.0:
+            self._reward_cnt = self._reward_cnt + int(reward.item() * 10)
+            # print("reward_cnt: ", self._reward_cnt)
 
         return reward.item()
 
@@ -391,41 +425,32 @@ class BalanceTask(BaseTask):
 
     def is_done(self) -> None:
         # print("running: is_done")
-        roll_x = self.obs[:, 0]
-        pitch_y = self.obs[:, 1]
+        roll_x = self.obs[:, 3]
+        pitch_y = self.obs[:, 4]
 
-        joint1_pos = self.obs[:, 2]
-        joint2_pos = self.obs[:, 3]
-        joint6_pos = self.obs[:, 4]
-        joint7_pos = self.obs[:, 5]
-        joint1_vel = self.obs[:, 6]
-        joint2_vel = self.obs[:, 7]
-        joint6_vel = self.obs[:, 8]
-        joint7_vel = self.obs[:, 9]
+        joint1_pos = self.obs[:, 5]
+        joint2_pos = self.obs[:, 6]
+        joint6_pos = self.obs[:, 7]
+        joint7_pos = self.obs[:, 8]
 
-        joint4_vel = self.obs[:, 10]
-        joint9_vel = self.obs[:, 11]
+        joint1_vel = self.obs[:, 9]
+        joint2_vel = self.obs[:, 10]
+        joint6_vel = self.obs[:, 11]
+        joint7_vel = self.obs[:, 12]
+
+        joint4_vel = self.obs[:, 13]
+        joint9_vel = self.obs[:, 14]
 
         # reset the robot if cart has reached reset_dist or pole is too far from upright
-        resets = torch.where(torch.abs(roll_x) > self._angel_limit, 1, 0)
-        resets = torch.where(torch.abs(pitch_y) > self._angel_limit, 1, resets)
+        resets = torch.where(torch.abs(roll_x) > self._angle_limit, 1, 0)
+        resets = torch.where(torch.abs(pitch_y) > self._angle_limit, 1, resets)
 
-        resets = torch.where(joint1_pos > self._pos_limit, 1, resets)
-        resets = torch.where(joint1_pos < 0, 1, resets)
-        resets = torch.where(joint2_pos > 0, 1, resets)
-        resets = torch.where(joint2_pos < -self._pos_limit, 1, resets)
-        resets = torch.where(joint6_pos > 0, 1, resets)
-        resets = torch.where(joint6_pos < -self._pos_limit, 1, resets)
-        resets = torch.where(joint7_pos > self._pos_limit, 1, resets)
-        resets = torch.where(joint7_pos < 0, 1, resets)
-
-        resets = torch.where(torch.abs(joint1_vel) > self._vel_limit, 1, resets)
-        resets = torch.where(torch.abs(joint2_vel) > self._vel_limit, 1, resets)
-        resets = torch.where(torch.abs(joint6_vel) > self._vel_limit, 1, resets)
-        resets = torch.where(torch.abs(joint7_vel) > self._vel_limit, 1, resets)
-
-        resets = torch.where(torch.abs(joint4_vel) > self._vel_limit, 1, resets)
-        resets = torch.where(torch.abs(joint9_vel) > self._vel_limit, 1, resets)
+        resets = torch.where(torch.tensor([self._reward_cnt]) > 1000, 1, resets)
+        if self._reward_cnt > 1000:
+            order = self._orders.pop(0)
+            self._orders.append(order)
+            self._reward_cnt = 0
+            # print("order: ", order)
 
         self.resets = resets
         # print("resets: ", resets.item())

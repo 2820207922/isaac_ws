@@ -7,27 +7,33 @@ task = BalanceTask(name="Balance")
 env.set_task(task, backend="torch")
 
 from stable_baselines3 import PPO
+import torch
 
 # create agent from stable baselines
-model = PPO(
-    "MlpPolicy",
-    env,
-    n_steps=1000,
-    batch_size=1000,
-    n_epochs=10,
-    learning_rate=0.001,
-    gamma=0.99,
-    device="cuda:0",
-    ent_coef=0.0,
-    vf_coef=0.5,
-    max_grad_norm=1.0,
-    verbose=1,
-    tensorboard_log="./balance_tensorboard"
+# model = PPO(
+#     "MlpPolicy",
+#     env,
+#     n_steps=1000,
+#     batch_size=1000,
+#     n_epochs=10,
+#     learning_rate=0.005,
+#     gamma=0.99,
+#     device="cuda:0",
+#     ent_coef=0.0,
+#     vf_coef=0.5,
+#     max_grad_norm=1.0,
+#     verbose=1,
+#     tensorboard_log="./balance_tensorboard"
+# )
+# torch.save(model.state_dict(),"model.pth")
+
+model = PPO.load(
+    "models/ppo/ppo_balance0", 
+    env=env, 
+    device="cuda:0"
 )
 
-# model = PPO.load("ppo_balance")
-
-model.learn(total_timesteps=100000)
-model.save("ppo_balance")
+model.learn(total_timesteps=300000)
+model.save("models/ppo/ppo_balance1")
 
 env.close()
